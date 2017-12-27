@@ -18,6 +18,7 @@ import org.netbeans.spi.editor.codegen.CodeGenerator;
 import org.openide.util.Lookup;
 
 public abstract class ExtendedCodeGenerator implements CodeGenerator {
+
     static final Logger LOG = Logger.getLogger(ExtendedCodeGenerator.class.getName());
 
     private final JTextComponent textComponent;
@@ -39,17 +40,12 @@ public abstract class ExtendedCodeGenerator implements CodeGenerator {
         Document doc = textComponent.getDocument();
         JavaSource javaSource = JavaSource.forDocument(doc);
 
-        CancellableTask<WorkingCopy> task =
-                new CodeGeneratorCancellableTask(textComponent) {
+        CancellableTask<WorkingCopy> task = new CodeGeneratorCancellableTask(textComponent) {
 
             @Override
-            public void generateCode(WorkingCopy workingCopy, TreePath path,
-                    int position) {
-                ExtendedCodeGenerator.this
-                        .generateCode(workingCopy, path, position,
-                                ExtendedCodeGenerator.this.fields);
+            public void generateCode(WorkingCopy workingCopy, TreePath path, int position) {
+                ExtendedCodeGenerator.this.generateCode(workingCopy, path, position, ExtendedCodeGenerator.this.fields);
             }
-
         };
 
         try {
@@ -65,14 +61,10 @@ public abstract class ExtendedCodeGenerator implements CodeGenerator {
         return fields;
     }
 
-    protected abstract void generateCode(WorkingCopy wc,
-            TreePath path,
-            int position,
-            List<VariableElement> fields);
-
+    protected abstract void generateCode(WorkingCopy wc, TreePath path, int position, List<VariableElement> fields);
 
     private void filterFields(List<VariableElement> fields) {
-        for (Iterator<VariableElement> i=fields.iterator(); i.hasNext();) {
+        for (Iterator<VariableElement> i = fields.iterator(); i.hasNext();) {
             VariableElement element = i.next();
             if (filterOutField(element)) {
                 i.remove();

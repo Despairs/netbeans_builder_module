@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.VariableElement;
 import org.netbeans.api.java.source.TreeMaker;
 
@@ -46,10 +47,10 @@ class FluentSettersMaker {
             if (member.getKind().equals(Tree.Kind.METHOD)) {
                 MethodTree mt = (MethodTree) member;
                 for (Element element : elements) {
-                    if (mt.getName().contentEquals(element.getSimpleName()) &&
-                            mt.getParameters().size() == 1 &&
-                            mt.getReturnType() != null &&
-                            mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
+                    if (mt.getName().contentEquals(element.getSimpleName())
+                            && mt.getParameters().size() == 1
+                            && mt.getReturnType() != null
+                            && mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
                         treeIt.remove();
                         if (index > counter) {
                             index--;
@@ -63,26 +64,36 @@ class FluentSettersMaker {
         return index;
     }
 
+    void addBuilderSetters(int index) {
+        addFluentSetters(index, "with");
+    }
+
     void addFluentSetters(int index) {
+        addFluentSetters(index, null);
+    }
+
+    void addFluentSetters(int index, String preffix) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
         List<AnnotationTree> annotations = new ArrayList<>();
 
         int position = index - 1;
         for (VariableElement element : elements) {
-            VariableTree parameter =
-                    make.Variable(make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
-                            Collections.<AnnotationTree>emptyList()),
-                            "value",
-                            make.Identifier(toStringWithoutPackages(element)),
-                            null);
+            Name elementName = element.getSimpleName();
+            VariableTree parameter = make.Variable(make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
+                    Collections.<AnnotationTree>emptyList()),
+                    elementName,
+                    make.Identifier(toStringWithoutPackages(element)),
+                    null);
 
             ExpressionTree returnType = make.QualIdent(className);
 
             final String bodyText = createFluentSetterMethodBody(element);
 
+            CharSequence methodName = preffix == null ? elementName : preffix + upFirstSymbol(String.valueOf(elementName));
+
             MethodTree method = make.Method(
                     make.Modifiers(modifiers, annotations),
-                    element.getSimpleName(),
+                    methodName,
                     returnType,
                     Collections.<TypeParameterTree>emptyList(),
                     Collections.<VariableTree>singletonList(parameter),
@@ -99,15 +110,17 @@ class FluentSettersMaker {
         StringBuilder sb = new StringBuilder();
         sb.append("{\nthis.")
                 .append(element.getSimpleName())
-                .append(" = value;\n")
+                .append(" = ")
+                .append(element.getSimpleName())
+                .append(";\n")
                 .append("return this;\n}");
         return sb.toString();
     }
 
     void addFields() {
         for (VariableElement element : elements) {
-            VariableTree field =
-                    make.Variable(make.Modifiers(
+            VariableTree field
+                    = make.Variable(make.Modifiers(
                             EnumSet.of(Modifier.PRIVATE),
                             Collections.<AnnotationTree>emptyList()),
                             element.getSimpleName().toString(),
@@ -119,7 +132,12 @@ class FluentSettersMaker {
     }
 
     private static String toStringWithoutPackages(VariableElement element) {
-        return PackageHelper.removePackagesFromGenericsType(
-                element.asType().toString());
+        return PackageHelper.removePackagesFromGenericsType(element.asType().toString());
+    }
+
+    public static String upFirstSymbol(String s) {
+        char c[] = s.toCharArray();
+        c[0] = Character.toUpperCase(c[0]);
+        return new String(c);
     }
 }

@@ -24,10 +24,11 @@ import org.openide.util.Lookup;
 @MimeRegistration(mimeType = "text/x-java",
         service = CodeGenerator.Factory.class)
 public class CodeGeneratorFactory implements CodeGenerator.Factory {
-    static final Logger LOG =
-            Logger.getLogger(CodeGeneratorFactory.class.getName());
+
+    static final Logger LOG = Logger.getLogger(CodeGeneratorFactory.class.getName());
 
     private static class CodeGeneratorException extends Exception {
+
         private static final long serialVersionUID = 1L;
 
         public CodeGeneratorException(String message) {
@@ -42,43 +43,27 @@ public class CodeGeneratorFactory implements CodeGenerator.Factory {
     @Override
     public List<? extends CodeGenerator> create(Lookup context) {
         try {
-            CompilationController controller =
-                    context.lookup(CompilationController.class);
-
+            CompilationController controller = context.lookup(CompilationController.class);
             controller.toPhase(JavaSource.Phase.ELEMENTS_RESOLVED);
-
             List<VariableElement> fields = getFields(context, controller);
-
             return Arrays.asList(new ConstantsGenerator(context, fields),
                     new FluentSetterGenerator(context, fields),
                     new BuilderGenerator(context, fields));
-
         } catch (CodeGeneratorException | NullPointerException | IOException ex) {
             LOG.warning(ex.toString());
             return Collections.<CodeGenerator>emptyList();
         }
     }
 
-    private List<VariableElement> getFields(Lookup context,
-            CompilationController controller)
-            throws CodeGeneratorException {
+    private List<VariableElement> getFields(Lookup context, CompilationController controller) throws CodeGeneratorException {
         try {
             TreePath treePath = context.lookup(TreePath.class);
-
-            TreePath path = TreeHelper
-                    .getParentElementOfKind(Tree.Kind.CLASS, treePath);
-
-            TypeElement typeElement = (TypeElement)
-                    controller.getTrees().getElement(path);
-
+            TreePath path = TreeHelper.getParentElementOfKind(Tree.Kind.CLASS, treePath);
+            TypeElement typeElement = (TypeElement) controller.getTrees().getElement(path);
             if (!typeElement.getKind().isClass()) {
-                throw new CodeGeneratorException("typeElement " +
-                        typeElement.getKind().name() +
-                        " is not a class, cannot generate code.");
+                throw new CodeGeneratorException("typeElement " + typeElement.getKind().name() + " is not a class, cannot generate code.");
             }
-
             Elements elements = controller.getElements();
-
             return ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
 
         } catch (NullPointerException ex) {
